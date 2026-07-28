@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useUser, UserRole } from "@/components/providers/app-providers";
@@ -348,7 +348,15 @@ export default function ProtectedLayout({
 
         {/* Dynamic Page Content */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
-          {children}
+          <Suspense
+            fallback={
+              <div className="flex h-full items-center justify-center">
+                <Activity className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            }
+          >
+            {children}
+          </Suspense>
         </main>
       </div>
     </div>
