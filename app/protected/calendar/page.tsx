@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -37,6 +37,11 @@ export default function CalendarPage() {
   const [apptTime, setApptTime] = useState("09:00");
   const [apptReason, setApptReason] = useState("");
   const [apptType, setApptType] = useState("Primera vez");
+  const [localTime, setLocalTime] = useState("");
+
+  useEffect(() => {
+    setLocalTime(new Date().toLocaleTimeString("es-US", { hour: "2-digit", minute: "2-digit" }));
+  }, []);
 
   // Cargar citas y catálogos
   const { data: appointments, isLoading } = useQuery({
@@ -221,7 +226,7 @@ export default function CalendarPage() {
         </h2>
         <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground bg-accent/60 px-3 py-1.5 rounded-xl border border-border/50">
           <Clock className="h-3.5 w-3.5" />
-          <span>Hora local: {new Date().toLocaleTimeString("es-US", { hour: "2-digit", minute: "2-digit" })}</span>
+          <span>Hora local: {localTime}</span>
         </div>
       </div>
 

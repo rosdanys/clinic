@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/components/providers/app-providers";
@@ -45,12 +45,6 @@ import { useRouter } from "next/navigation";
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
 const DAY_NAMES = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-const todayStr = () => new Date().toISOString().split("T")[0];
-const weekStart = () => {
-  const d = new Date();
-  d.setDate(d.getDate() - d.getDay());
-  return d.toISOString().split("T")[0];
-};
 
 export default function DashboardPage() {
   const { profile } = useUser();
@@ -58,15 +52,27 @@ export default function DashboardPage() {
   const supabase = createClient();
   const [period, setPeriod] = useState("Hoy");
   const [searchQuery, setSearchQuery] = useState("");
+  const [todayStr, setTodayStr] = useState("");
+  const [weekStartStr, setWeekStartStr] = useState("");
+  const [now, setNow] = useState<Date | null>(null);
+
+  useEffect(() => {
+    const current = new Date();
+    setNow(current);
+    setTodayStr(current.toISOString().split("T")[0]);
+    const d = new Date(current);
+    d.setDate(d.getDate() - d.getDay());
+    setWeekStartStr(d.toISOString().split("T")[0]);
+  }, []);
 
   // Today's appointments
   const { data: todayAppts = [], isLoading: apptsLoading } = useQuery({
-    queryKey: ["dashboard-appointments", todayStr()],
+    queryKey: ["dashboard-appointments", todayStr],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
         .select("id, time, reason, type, status, patients(id, name, phone, classification), profiles!appointments_doctor_id_fkey(id, name)")
-        .eq("date", todayStr());
+        .eq("date", todayStr);
       if (error) throw error;
       return data || [];
     },
@@ -74,12 +80,12 @@ export default function DashboardPage() {
 
   // Today's payments
   const { data: todayPayments = [] } = useQuery({
-    queryKey: ["dashboard-payments-today", todayStr()],
+    queryKey: ["dashboard-payments-today", todayStr],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("payments")
         .select("total, amount_paid, method, created_at")
-        .gte("created_at", todayStr());
+        .gte("created_at", todayStr);
       if (error) throw error;
       return data || [];
     },
@@ -87,12 +93,12 @@ export default function DashboardPage() {
 
   // Today's expenses
   const { data: todayExpenses = [] } = useQuery({
-    queryKey: ["dashboard-expenses-today", todayStr()],
+    queryKey: ["dashboard-expenses-today", todayStr],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expenses")
         .select("amount, category_id, date, expense_categories(name)")
-        .eq("date", todayStr());
+        .eq("date", todayStr);
       if (error) throw error;
       return data || [];
     },
@@ -100,12 +106,12 @@ export default function DashboardPage() {
 
   // Weekly payments (for chart)
   const { data: weeklyPayments = [] } = useQuery({
-    queryKey: ["dashboard-payments-weekly", weekStart()],
+    queryKey: ["dashboard-payments-weekly", weekStartStr],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("payments")
         .select("total, amount_paid, method, created_at")
-        .gte("created_at", weekStart());
+        .gte("created_at", weekStartStr);
       if (error) throw error;
       return data || [];
     },
@@ -113,12 +119,12 @@ export default function DashboardPage() {
 
   // Weekly expenses (for chart)
   const { data: weeklyExpenses = [] } = useQuery({
-    queryKey: ["dashboard-expenses-weekly", weekStart()],
+    queryKey: ["dashboard-expenses-weekly", weekStartStr],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expenses")
         .select("amount, date, expense_categories(name)")
-        .gte("date", weekStart());
+        .gte("date", weekStartStr);
       if (error) throw error;
       return data || [];
     },
@@ -139,12 +145,12 @@ export default function DashboardPage() {
 
   // Weekly appointments for patient classification chart
   const { data: weeklyAppts = [] } = useQuery({
-    queryKey: ["dashboard-appointments-weekly", weekStart()],
+    queryKey: ["dashboard-appointments-weekly", weekStartStr],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
         .select("date, type, patients(classification)")
-        .gte("date", weekStart());
+        .gte("date", weekStartStr);
       if (error) throw error;
       return data || [];
     },
@@ -217,7 +223,7 @@ export default function DashboardPage() {
     const chartGastosCategoria = Object.entries(categoryMap).map(([name, value]) => ({ name, value }));
 
     const dayClassification: Record<string, { Nuevos: number; Seguimiento: number }> = {};
-    const todayDayIdx = new Date().getDay();
+    const todayDayIdx = now?.getDay() ?? 0;
     for (let i = 0; i <= todayDayIdx; i++) {
       dayClassification[i] = { Nuevos: 0, Seguimiento: 0 };
     }
@@ -263,11 +269,10 @@ export default function DashboardPage() {
         metodosPago: chartMetodosPago,
       },
     };
-  }, [todayAppts, todayPayments, todayExpenses, weeklyPayments, weeklyExpenses, allExpenses, weeklyAppts]);
+  }, [todayAppts, todayPayments, todayExpenses, weeklyPayments, weeklyExpenses, allExpenses, weeklyAppts, now]);
 
   const isAppointmentDelayed = (apptTimeStr: string, status: string) => {
-    if (status !== "Pendiente") return false;
-    const now = new Date();
+    if (status !== "Pendiente" || !now) return false;
     const apptTime = new Date();
     const [hrs, mins, secs] = apptTimeStr.split(":");
     apptTime.setHours(parseInt(hrs), parseInt(mins), parseInt(secs || "0"));

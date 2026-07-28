@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Heart, Lock, Mail, Stethoscope, User } from "lucide-react";
 
 export function SignUpForm({
@@ -19,7 +19,12 @@ export function SignUpForm({
   const [repeatPassword, setRepeatPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [year, setYear] = useState<number | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    setYear(new Date().getFullYear());
+  }, []);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,7 +187,7 @@ export function SignUpForm({
       </div>
 
       <p className="text-center text-xs text-muted-foreground/60 mt-6">
-        © {new Date().getFullYear()} Clinic Control · Acceso restringido al personal autorizado
+        © {year} Clinic Control · Acceso restringido al personal autorizado
       </p>
     </div>
   );
