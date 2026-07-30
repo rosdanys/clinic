@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useUser } from "@/components/providers/app-providers";
+import { logAudit } from "@/lib/audit";
 
 export default function PatientDetailsPage() {
   const { id } = useParams() as { id: string };
@@ -99,6 +100,16 @@ export default function PatientDetailsPage() {
       }
     },
     onSuccess: () => {
+      logAudit({
+        supabase,
+        userId: profile?.id,
+        userName: profile?.name,
+        action: "UPDATE",
+        module: "Pacientes",
+        tableName: "appointments",
+        recordId: patient?.id,
+        description: `Agregó nota médica al paciente: ${patient?.name}`,
+      });
       queryClient.invalidateQueries({ queryKey: ["patient-details", id] });
       setNewNote("");
       alert("Nota clínica registrada con éxito.");

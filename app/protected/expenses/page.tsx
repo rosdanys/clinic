@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/components/providers/app-providers";
+import { logAudit } from "@/lib/audit";
 import {
   TrendingDown,
   Plus,
@@ -81,6 +82,15 @@ export default function ExpensesPage() {
       if (error) throw error;
     },
     onSuccess: () => {
+      logAudit({
+        supabase,
+        userId: profile?.id,
+        userName: profile?.name,
+        action: "CREATE",
+        module: "Gastos",
+        tableName: "expenses",
+        description: `Registró gasto: ${concept} por $${Number(amount).toFixed(2)} (${provider || "Sin proveedor"})`,
+      });
       queryClient.invalidateQueries({ queryKey: ["expenses-list"] });
       setShowAddModal(false);
       setConcept("");

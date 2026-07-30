@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/components/providers/app-providers";
+import { logAudit } from "@/lib/audit";
 import {
   Coins,
   Plus,
@@ -133,6 +134,16 @@ export default function PayrollPage() {
       if (error) throw error;
     },
     onSuccess: () => {
+      const emp = employees?.find((e: any) => e.id === selectedEmployeeId);
+      logAudit({
+        supabase,
+        userId: profile?.id,
+        userName: profile?.name,
+        action: "CREATE",
+        module: "Nómina",
+        tableName: "payroll",
+        description: `Procesó pago de nómina a ${emp?.name || "Empleado"} por $${getSumTotal().toFixed(2)}`,
+      });
       queryClient.invalidateQueries({ queryKey: ["payroll-list"] });
       setShowAddModal(false);
       setOvertimeHours("0");

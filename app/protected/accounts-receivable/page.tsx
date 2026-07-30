@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useUser } from "@/components/providers/app-providers";
+import { logAudit } from "@/lib/audit";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +26,7 @@ import Link from "next/link";
 export default function AccountsReceivablePage() {
   const supabase = createClient();
   const queryClient = useQueryClient();
+  const { profile } = useUser();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
   
@@ -118,6 +121,16 @@ export default function AccountsReceivablePage() {
       }
     },
     onSuccess: () => {
+      logAudit({
+        supabase,
+        userId: profile?.id,
+        userName: profile?.name,
+        action: "UPDATE",
+        module: "Cuentas por Cobrar",
+        tableName: "accounts_receivable",
+        recordId: selectedCxC?.id,
+        description: `Registró abono de $${Number(paymentAmount).toFixed(2)} en CxC de ${selectedCxC?.patients?.name || "Paciente"}`,
+      });
       queryClient.invalidateQueries({ queryKey: ["receivables-list"] });
       setSelectedCxC(null);
       setPaymentAmount("");

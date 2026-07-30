@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useUser } from "@/components/providers/app-providers";
+import { logAudit } from "@/lib/audit";
 
 export default function CalendarPage() {
   const supabase = createClient();
@@ -95,6 +96,16 @@ export default function CalendarPage() {
       if (error) throw error;
     },
     onSuccess: () => {
+      const patientObj = patients?.find((p: any) => p.id === selectedPatientId);
+      logAudit({
+        supabase,
+        userId: profile?.id,
+        userName: profile?.name,
+        action: "CREATE",
+        module: "Calendario",
+        tableName: "appointments",
+        description: `Agendó cita para ${patientObj?.name || "Paciente"} el ${apptDate} a las ${apptTime}`,
+      });
       queryClient.invalidateQueries({ queryKey: ["appointments-calendar"] });
       setShowAddModal(false);
       setApptReason("");
@@ -110,7 +121,17 @@ export default function CalendarPage() {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      logAudit({
+        supabase,
+        userId: profile?.id,
+        userName: profile?.name,
+        action: "UPDATE",
+        module: "Calendario",
+        tableName: "appointments",
+        recordId: variables.id,
+        description: `Cambió estado de la cita a ${variables.status}`,
+      });
       queryClient.invalidateQueries({ queryKey: ["appointments-calendar"] });
     },
   });
