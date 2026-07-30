@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Heart, Lock, Mail, Stethoscope } from "lucide-react";
+import { Activity, Lock, Mail } from "lucide-react";
 
 export function LoginForm({
   className,
@@ -62,15 +62,12 @@ export function LoginForm({
       {/* Header branding */}
       <div className="flex flex-col items-center gap-3 mb-8">
         <div className="relative">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-            <Stethoscope className="h-8 w-8 text-white" />
-          </div>
-          <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-rose-500 flex items-center justify-center">
-            <Heart className="h-2.5 w-2.5 text-white fill-white" />
+          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-glow">
+            <Activity className="h-8 w-8 text-primary-foreground" />
           </div>
         </div>
         <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground font-display">
             Clinic Control
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -80,9 +77,9 @@ export function LoginForm({
       </div>
 
       {/* Card */}
-      <div className="rounded-2xl border border-border/60 bg-card shadow-xl shadow-black/5 p-8">
+      <div className="rounded-xl border border-border bg-card p-8">
         <div className="mb-6">
-          <h2 className="text-xl font-bold text-foreground">Iniciar sesión</h2>
+          <h2 className="text-xl font-bold text-foreground font-display">Iniciar sesión</h2>
           <p className="text-sm text-muted-foreground mt-1">
             Ingresá tus credenciales para acceder al sistema
           </p>
@@ -100,7 +97,7 @@ export function LoginForm({
                 type="email"
                 placeholder="doctor@clinica.com"
                 required
-                className="pl-10 rounded-xl h-11 border-border/60 bg-background/50 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all"
+                className="pl-10 h-11"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -114,7 +111,7 @@ export function LoginForm({
               </Label>
               <Link
                 href="/auth/forgot-password"
-                className="text-xs text-emerald-600 hover:text-emerald-500 font-medium transition-colors"
+                className="text-xs text-primary hover:text-primary/80 font-medium transition-colors"
               >
                 ¿Olvidaste tu contraseña?
               </Link>
@@ -126,7 +123,7 @@ export function LoginForm({
                 type="password"
                 placeholder="••••••••"
                 required
-                className="pl-10 rounded-xl h-11 border-border/60 bg-background/50 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all"
+                className="pl-10 h-11"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -142,7 +139,7 @@ export function LoginForm({
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-full h-11 rounded-xl font-semibold text-sm bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 border-0 shadow-lg shadow-emerald-500/25 transition-all duration-200 disabled:opacity-70"
+            className="w-full h-11 rounded-xl font-semibold text-sm"
           >
             {isLoading ? (
               <span className="flex items-center gap-2">
@@ -157,15 +154,15 @@ export function LoginForm({
             )}
           </Button>
 
-          <div className="text-center text-sm text-muted-foreground">
+          {/* <div className="text-center text-sm text-muted-foreground">
             ¿No tenés cuenta?{" "}
             <Link
               href="/auth/sign-up"
-              className="text-emerald-600 hover:text-emerald-500 font-semibold transition-colors"
+              className="text-primary hover:text-primary/80 font-semibold transition-colors"
             >
               Registrarse
             </Link>
-          </div>
+          </div> */}
         </form>
       </div>
 
