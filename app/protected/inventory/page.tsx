@@ -24,6 +24,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useUser } from "@/components/providers/app-providers";
+import { logAudit } from "@/lib/audit";
+import { toast } from "sonner";
 
 export default function InventoryPage() {
   const supabase = createClient();
@@ -100,10 +102,20 @@ export default function InventoryPage() {
       if (error) throw error;
     },
     onSuccess: () => {
+      logAudit({
+        supabase,
+        userId: profile?.id,
+        userName: profile?.name,
+        action: "UPDATE",
+        module: "Inventario",
+        tableName: "inventory",
+        recordId: selectedProduct?.id,
+        description: `Registró ${actionType} de ${actionQuantity} uds en insumo: ${selectedProduct?.product}`,
+      });
       queryClient.invalidateQueries({ queryKey: ["inventory-list"] });
       setSelectedProduct(null);
       setActionQuantity("10");
-      alert("Ajuste de inventario realizado con éxito.");
+      toast.success("Ajuste de inventario realizado con éxito.");
     }
   });
 
