@@ -106,6 +106,17 @@ export default function SettingsPage() {
   const [invForm, setInvForm] = useState(EMPTY_FORM);
   const [deleteTarget, setDeleteTarget] = useState<InventoryItem | null>(null);
 
+  // ── Catálogos state ─────────────────────────────────────────────────────────
+  const [showInsModal, setShowInsModal] = useState(false);
+  const [editingIns, setEditingIns] = useState<any | null>(null);
+  const [insName, setInsName] = useState("");
+  const [deleteInsTarget, setDeleteInsTarget] = useState<any | null>(null);
+  const [showProcModal, setShowProcModal] = useState(false);
+  const [editingProc, setEditingProc] = useState<any | null>(null);
+  const [procName, setProcName] = useState("");
+  const [procCost, setProcCost] = useState("");
+  const [deleteProcTarget, setDeleteProcTarget] = useState<any | null>(null);
+
   // ── Queries ─────────────────────────────────────────────────────────────────
   const { data: usersList, isLoading: usersLoading } = useQuery({
     queryKey: ["settings-users"],
@@ -365,6 +376,155 @@ export default function SettingsPage() {
     },
   });
 
+  // ── Mutations: Catálogos (Aseguradoras y Procedimientos) ─────────────────────
+  const upsertInsMutation = useMutation({
+    mutationFn: async (isEdit: boolean) => {
+      const payload = { name: insName.trim() };
+      if (isEdit && editingIns) {
+        const { error } = await supabase.from("insurance_providers").update(payload).eq("id", editingIns.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("insurance_providers").insert(payload);
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_, isEdit) => {
+      logAudit({
+        supabase,
+        userId: profile?.id,
+        userName: profile?.name,
+        action: isEdit ? "UPDATE" : "CREATE",
+        module: "Catálogos",
+        tableName: "insurance_providers",
+        recordId: editingIns?.id,
+        description: isEdit ? `Editó aseguradora: ${insName}` : `Agregó aseguradora: ${insName}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["settings-insurances"] });
+      setShowInsModal(false);
+      setEditingIns(null);
+      setInsName("");
+      toast.success(isEdit ? "Aseguradora actualizada." : "Aseguradora agregada al catálogo.");
+    },
+    onError: (error: Error) => {
+      toast.error(`Error al guardar aseguradora: ${error.message}`);
+    },
+  });
+
+  const deleteInsMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("insurance_providers").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, deletedId) => {
+      logAudit({
+        supabase,
+        userId: profile?.id,
+        userName: profile?.name,
+        action: "DELETE",
+        module: "Catálogos",
+        tableName: "insurance_providers",
+        recordId: deletedId,
+        description: `Eliminó aseguradora: ${deleteInsTarget?.name || deletedId}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["settings-insurances"] });
+      setDeleteInsTarget(null);
+      toast.success("Aseguradora eliminada del catálogo.");
+    },
+    onError: (error: Error) => {
+      toast.error(`Error al eliminar aseguradora: ${error.message}`);
+    },
+  });
+
+  const upsertProcMutation = useMutation({
+    mutationFn: async (isEdit: boolean) => {
+      const payload = {
+        name: procName.trim(),
+        cost: Number(procCost),
+      };
+      if (isEdit && editingProc) {
+        const { error } = await supabase.from("procedures").update(payload).eq("id", editingProc.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("procedures").insert(payload);
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_, isEdit) => {
+      logAudit({
+        supabase,
+        userId: profile?.id,
+        userName: profile?.name,
+        action: isEdit ? "UPDATE" : "CREATE",
+        module: "Catálogos",
+        tableName: "procedures",
+        recordId: editingProc?.id,
+        description: isEdit
+          ? `Editó procedimiento: ${procName} ($${Number(procCost).toFixed(2)})`
+          : `Agregó procedimiento: ${procName} ($${Number(procCost).toFixed(2)})`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["settings-procedures"] });
+      setShowProcModal(false);
+      setEditingProc(null);
+      setProcName("");
+      setProcCost("");
+      toast.success(isEdit ? "Procedimiento actualizado." : "Procedimiento agregado al catálogo.");
+    },
+    onError: (error: Error) => {
+      toast.error(`Error al guardar procedimiento: ${error.message}`);
+    },
+  });
+
+  const deleteProcMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("procedures").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, deletedId) => {
+      logAudit({
+        supabase,
+        userId: profile?.id,
+        userName: profile?.name,
+        action: "DELETE",
+        module: "Catálogos",
+        tableName: "procedures",
+        recordId: deletedId,
+        description: `Eliminó procedimiento: ${deleteProcTarget?.name || deletedId}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["settings-procedures"] });
+      setDeleteProcTarget(null);
+      toast.success("Procedimiento eliminado del catálogo.");
+    },
+    onError: (error: Error) => {
+      toast.error(`Error al eliminar procedimiento: ${error.message}`);
+    },
+  });
+
+  const openCreateIns = () => {
+    setEditingIns(null);
+    setInsName("");
+    setShowInsModal(true);
+  };
+
+  const openEditIns = (ins: any) => {
+    setEditingIns(ins);
+    setInsName(ins.name);
+    setShowInsModal(true);
+  };
+
+  const openCreateProc = () => {
+    setEditingProc(null);
+    setProcName("");
+    setProcCost("");
+    setShowProcModal(true);
+  };
+
+  const openEditProc = (proc: any) => {
+    setEditingProc(proc);
+    setProcName(proc.name);
+    setProcCost(String(proc.cost));
+    setShowProcModal(true);
+  };
+
   const closeInvModal = () => {
     setShowInvModal(false);
     setEditingItem(null);
@@ -581,14 +741,25 @@ export default function SettingsPage() {
                   <CardTitle className="text-base font-bold">Aseguradoras médicas</CardTitle>
                   <CardDescription>Catálogo de seguros autorizados.</CardDescription>
                 </div>
+                <Button
+                  className="rounded-xl bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/95 text-white font-bold h-9 px-3 text-xs"
+                  onClick={openCreateIns}
+                >
+                  <Plus className="h-4 w-4" /> Agregar
+                </Button>
               </CardHeader>
               <CardContent className="divide-y divide-border/40 p-0">
                 {insurances?.map((ins: any) => (
                   <div key={ins.id} className="flex justify-between items-center py-3.5 px-6 hover:bg-muted/10 transition-colors">
                     <span className="font-semibold text-foreground">{ins.name}</span>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-primary hover:bg-primary/10" title="Editar" onClick={() => openEditIns(ins)}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10" title="Eliminar" onClick={() => setDeleteInsTarget(ins)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </CardContent>
@@ -601,6 +772,12 @@ export default function SettingsPage() {
                   <CardTitle className="text-base font-bold">Procedimientos y Costos</CardTitle>
                   <CardDescription>Catálogo de servicios y aranceles.</CardDescription>
                 </div>
+                <Button
+                  className="rounded-xl bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/95 text-white font-bold h-9 px-3 text-xs"
+                  onClick={openCreateProc}
+                >
+                  <Plus className="h-4 w-4" /> Agregar
+                </Button>
               </CardHeader>
               <CardContent className="divide-y divide-border/40 p-0">
                 {procedures?.map((proc: any) => (
@@ -609,9 +786,14 @@ export default function SettingsPage() {
                       <span className="font-semibold text-foreground">{proc.name}</span>
                       <span className="text-xs text-muted-foreground font-bold text-green-500">${proc.cost.toFixed(2)}</span>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-primary hover:bg-primary/10" title="Editar" onClick={() => openEditProc(proc)}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10" title="Eliminar" onClick={() => setDeleteProcTarget(proc)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </CardContent>
@@ -1014,6 +1196,124 @@ export default function SettingsPage() {
                 </Button>
               </div>
             </form>
+          </Card>
+        </div>
+      )}
+
+      {/* ══ Modal: Aseguradora (Crear / Editar) ═══════════════════════════════════ */}
+      {showInsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md border-border/80 shadow-2xl">
+            <CardHeader className="border-b border-border/40 pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-primary" />
+                  {editingIns ? "Editar Aseguradora" : "Agregar Aseguradora"}
+                </CardTitle>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setShowInsModal(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <CardDescription>Catálogo de seguros autorizados por la clínica.</CardDescription>
+            </CardHeader>
+            <form onSubmit={(e) => { e.preventDefault(); if (!insName.trim()) return; upsertInsMutation.mutate(!!editingIns); }}>
+              <CardContent className="pt-6 space-y-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="ins-name">Nombre de la Aseguradora <span className="text-destructive">*</span></Label>
+                  <Input id="ins-name" type="text" placeholder="Ej: OSDE, Swiss Medical, IOMA" className="rounded-xl" required value={insName} onChange={(e) => setInsName(e.target.value)} />
+                </div>
+              </CardContent>
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-border/40">
+                <Button type="button" variant="outline" className="rounded-xl border-border/80" onClick={() => setShowInsModal(false)}>Cancelar</Button>
+                <Button type="submit" className="rounded-xl bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/95 text-white font-bold" disabled={upsertInsMutation.isPending}>
+                  {upsertInsMutation.isPending ? "Guardando..." : editingIns ? "Guardar Cambios" : "Agregar"}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* ══ Modal: Procedimiento (Crear / Editar) ═════════════════════════════════ */}
+      {showProcModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md border-border/80 shadow-2xl">
+            <CardHeader className="border-b border-border/40 pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-primary" />
+                  {editingProc ? "Editar Procedimiento" : "Agregar Procedimiento"}
+                </CardTitle>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setShowProcModal(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <CardDescription>Catálogo de servicios y aranceles de la clínica.</CardDescription>
+            </CardHeader>
+            <form onSubmit={(e) => { e.preventDefault(); if (!procName.trim()) return; upsertProcMutation.mutate(!!editingProc); }}>
+              <CardContent className="pt-6 space-y-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="proc-name">Nombre del Servicio <span className="text-destructive">*</span></Label>
+                  <Input id="proc-name" type="text" placeholder="Ej: Consulta, Laboratorio, Ecografía" className="rounded-xl" required value={procName} onChange={(e) => setProcName(e.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="proc-cost">Costo / Arancel ($) <span className="text-destructive">*</span></Label>
+                  <Input id="proc-cost" type="number" min="0" step="0.01" placeholder="0.00" className="rounded-xl font-bold" required value={procCost} onChange={(e) => setProcCost(e.target.value)} />
+                </div>
+              </CardContent>
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-border/40">
+                <Button type="button" variant="outline" className="rounded-xl border-border/80" onClick={() => setShowProcModal(false)}>Cancelar</Button>
+                <Button type="submit" className="rounded-xl bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/95 text-white font-bold" disabled={upsertProcMutation.isPending}>
+                  {upsertProcMutation.isPending ? "Guardando..." : editingProc ? "Guardar Cambios" : "Agregar"}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* ══ Modal: Confirmar Eliminación de Aseguradora ═══════════════════════════ */}
+      {deleteInsTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-sm border-destructive/40 shadow-2xl">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-bold text-destructive flex items-center gap-2">
+                <Trash2 className="h-5 w-5" /> Eliminar Aseguradora
+              </CardTitle>
+              <CardDescription>Esta acción no se puede deshacer.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-foreground">¿Estás seguro de que querés eliminar <span className="font-bold">{deleteInsTarget.name}</span> del catálogo?</p>
+            </CardContent>
+            <div className="flex items-center justify-end gap-3 p-4 border-t border-border/40">
+              <Button variant="outline" className="rounded-xl" onClick={() => setDeleteInsTarget(null)} disabled={deleteInsMutation.isPending}>Cancelar</Button>
+              <Button className="rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold" disabled={deleteInsMutation.isPending} onClick={() => deleteInsMutation.mutate(deleteInsTarget.id)}>
+                {deleteInsMutation.isPending ? "Eliminando..." : "Eliminar"}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ══ Modal: Confirmar Eliminación de Procedimiento ═════════════════════════ */}
+      {deleteProcTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-sm border-destructive/40 shadow-2xl">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-bold text-destructive flex items-center gap-2">
+                <Trash2 className="h-5 w-5" /> Eliminar Procedimiento
+              </CardTitle>
+              <CardDescription>Esta acción no se puede deshacer.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-foreground">¿Estás seguro de que querés eliminar <span className="font-bold">{deleteProcTarget.name}</span> del catálogo?</p>
+            </CardContent>
+            <div className="flex items-center justify-end gap-3 p-4 border-t border-border/40">
+              <Button variant="outline" className="rounded-xl" onClick={() => setDeleteProcTarget(null)} disabled={deleteProcMutation.isPending}>Cancelar</Button>
+              <Button className="rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold" disabled={deleteProcMutation.isPending} onClick={() => deleteProcMutation.mutate(deleteProcTarget.id)}>
+                {deleteProcMutation.isPending ? "Eliminando..." : "Eliminar"}
+              </Button>
+            </div>
           </Card>
         </div>
       )}
